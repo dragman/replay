@@ -247,7 +247,6 @@
     let index = 0;
     let playbackMessages = FALLBACK_MESSAGES;
     let allMessages = FALLBACK_MESSAGES;
-    let currentKeyParam = "";
     const senderColors = {};
     const COLOR_PALETTE = [
       "#1d4ed8",
@@ -261,6 +260,39 @@
     ];
     let colorPointer = 0;
 
+    const KEY_STORAGE_KEY = "chatReplayKey";
+    const initialUrl = new URL(window.location.href);
+    const initialSearchParams = new URLSearchParams(initialUrl.search);
+    const initialHashString = initialUrl.hash.startsWith("#") ? initialUrl.hash.slice(1) : "";
+    const initialHashParams = new URLSearchParams(initialHashString);
+    const keyFromUrl = initialSearchParams.get("K") || initialHashParams.get("K") || "";
+    let storedKey = "";
+    try {
+      storedKey = sessionStorage.getItem(KEY_STORAGE_KEY) || "";
+    } catch (_) {
+      storedKey = "";
+    }
+    const KEY_PARAM = keyFromUrl || storedKey || "";
+    if (keyFromUrl) {
+      try {
+        sessionStorage.setItem(KEY_STORAGE_KEY, keyFromUrl);
+      } catch (_) {
+        // ignore storage issues
+      }
+    }
+
+    if (initialSearchParams.has("K")) {
+      initialSearchParams.delete("K");
+    }
+    const hashDate = initialHashParams.get("D");
+    if (hashDate && !initialSearchParams.get("D")) {
+      initialSearchParams.set("D", hashDate);
+    }
+    const sanitizedQuery = initialSearchParams.toString();
+    if (initialUrl.search !== (sanitizedQuery ? `?${sanitizedQuery}` : "") || initialUrl.hash) {
+      history.replaceState(null, "", initialUrl.pathname + (sanitizedQuery ? `?${sanitizedQuery}` : ""));
+    }
+
     function base64ToBytes(b64) {
       const binary = atob(b64);
       const out = new Uint8Array(binary.length);
@@ -271,7 +303,7 @@
     }
 
     function base32ToBytes(str) {
-      if (!str) throw new Error("Missing key in URL hash");
+      if (!str) throw new Error("Missing Base32 key");
       const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
       const clean = str.replace(/=+$/g, "").toUpperCase();
       let buffer = 0;
@@ -290,14 +322,6 @@
       }
 
       return new Uint8Array(out);
-    }
-
-    function getParamValue(name) {
-      const searchValue = new URLSearchParams(window.location.search).get(name);
-      if (searchValue) return searchValue;
-      const hash = location.hash.startsWith("#") ? location.hash.slice(1) : location.hash;
-      const hashValue = new URLSearchParams(hash).get(name);
-      return hashValue;
     }
 
     function normalizeDateInput(value) {
@@ -362,16 +386,14 @@
       if (!dateInputEl) return;
       const isoValue = dateInputEl.value;
 
-      const params = new URLSearchParams();
-      if (currentKeyParam) {
-        params.set("K", currentKeyParam);
-      }
+      const url = new URL(window.location.href);
+      url.searchParams.delete("K");
       if (isoValue) {
-        params.set("D", isoValue);
+        url.searchParams.set("D", isoValue);
+      } else {
+        url.searchParams.delete("D");
       }
-      const paramString = params.toString();
-      location.hash = paramString ? paramString : "";
-      window.location.reload();
+      window.location.href = url.pathname + (url.searchParams.toString() ? `?${url.searchParams}` : "");
     }
 
     if (dateInputEl) {
@@ -380,14 +402,16 @@
 
     async function loadMessages() {
       try {
-        const keyB32 = getParamValue("K");
-        const dateFilterRaw = getParamValue("D");
+        if (!KEY_PARAM) {
+          throw new Error("Missing decryption key");
+        }
+        const currentUrl = new URL(window.location.href);
+        const dateFilterRaw = currentUrl.searchParams.get("D") || "";
         const normalizedDate = normalizeDateInput(dateFilterRaw);
         if (dateFilterRaw && !normalizedDate) {
           console.warn("Invalid date filter. Use DD/MM/YYYY or YYYY-MM-DD.");
         }
-        currentKeyParam = keyB32 || "";
-        const keyBytes = base32ToBytes(keyB32);
+        const keyBytes = base32ToBytes(KEY_PARAM);
 
         const response = await fetch("chat_data.enc");
         if (!response.ok) {
