@@ -11,17 +11,27 @@
       background: #111827;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
         sans-serif;
+      min-height: 100vh;
       display: flex;
       justify-content: center;
       align-items: center;
-      height: 100vh;
+    }
+
+    .app-container {
+      width: 100%;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      box-sizing: border-box;
     }
 
     .phone-frame {
-      width: 400px;
-      height: 720px;
+      width: min(100%, 400px);
+      height: min(90vh, 720px);
       background: #020617;
-      border-radius: 24px;
+      border-radius: clamp(16px, 4vw, 24px);
       box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
       display: flex;
       flex-direction: column;
@@ -200,7 +210,8 @@
   </style>
 </head>
 <body>
-  <div class="phone-frame">
+  <div class="app-container">
+    <div class="phone-frame">
     <div class="top-bar">
       <div class="dot"></div>
       <span>Group Chat · Replay</span>
