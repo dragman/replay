@@ -2,9 +2,12 @@ import re
 import json
 import os
 import base64
+import gzip
 from pathlib import Path
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+EXPIRY_ENV_VAR = "CHAT_KEY_EXPIRES"
 
 # Matches: [04/04/2020, 10:54:24] Name: Message text
 LINE_RE = re.compile(
@@ -62,8 +65,9 @@ def parse_whatsapp(path):
     return messages
 
 
-def encrypt_messages(messages, output_path="chat_data.enc"):
-    data = json.dumps(messages, ensure_ascii=False).encode("utf-8")
+def encrypt_messages(messages, output_path="chat_data.enc", expires_on=None):
+    json_bytes = json.dumps(messages, ensure_ascii=False).encode("utf-8")
+    data = gzip.compress(json_bytes)
     key = AESGCM.generate_key(bit_length=256)
     nonce = os.urandom(12)
     aes = AESGCM(key)
@@ -73,6 +77,8 @@ def encrypt_messages(messages, output_path="chat_data.enc"):
         "nonce": base64.b64encode(nonce).decode("ascii"),
         "ciphertext": base64.b64encode(cipher).decode("ascii"),
     }
+    if expires_on:
+        payload["expires"] = expires_on
 
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(payload, f)
@@ -90,7 +96,11 @@ if __name__ == "__main__":
     with open("parsed_chat.json", "w", encoding="utf-8") as f:
         json.dump(msgs, f, ensure_ascii=False, indent=2)
 
-    key_b32 = encrypt_messages(msgs, "chat_data.enc")
+    expires_on = os.environ.get(EXPIRY_ENV_VAR, "").strip() or None
+    if expires_on:
+        print(f"Embedding expiry date: {expires_on}")
+
+    key_b32 = encrypt_messages(msgs, "chat_data.enc", expires_on=expires_on)
 
     print("Wrote parsed_chat.json and chat_data.enc")
     print("Provide the following Base32 key via QR code / URL hash:")

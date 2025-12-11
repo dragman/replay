@@ -101,6 +101,14 @@
       box-shadow: 0 4px 10px rgba(21, 128, 61, 0.5);
     }
 
+    .status-message {
+      color: #f1f5f9;
+      text-align: center;
+      font-size: 13px;
+      padding: 24px;
+      opacity: 0.85;
+    }
+
     .control-bar {
       background: #030712;
       border-bottom: 1px solid rgba(15, 23, 42, 0.8);
@@ -176,7 +184,7 @@
       width: 6px;
       height: 6px;
       border-radius: 999px;
-      background: #f97316;
+      background: #16f978;
       margin-right: 8px;
       box-shadow: 0 0 10px rgba(249, 115, 22, 0.7);
     }
@@ -195,7 +203,7 @@
   <div class="phone-frame">
     <div class="top-bar">
       <div class="dot"></div>
-      <span>First Messages · Replay</span>
+      <span>Group Chat · Replay</span>
     </div>
     <div class="control-bar">
       <label for="dateInput">Jump to date</label>
@@ -396,14 +404,36 @@
       window.location.href = url.pathname + (url.searchParams.toString() ? `?${url.searchParams}` : "");
     }
 
-    if (dateInputEl) {
-      dateInputEl.addEventListener("change", handleDateInputChange);
+      if (dateInputEl) {
+        dateInputEl.addEventListener("change", handleDateInputChange);
+      }
+
+    function showStatusMessage(message) {
+      if (!chatEl) return;
+      chatEl.innerHTML = "";
+      const status = document.createElement("div");
+      status.className = "status-message";
+      status.textContent = message;
+      chatEl.appendChild(status);
     }
+
+      async function gunzip(buffer) {
+        if ("DecompressionStream" in window) {
+          const ds = new DecompressionStream("gzip");
+          const decompressedStream = new Blob([buffer]).stream().pipeThrough(ds);
+          const decompressedBuffer = await new Response(decompressedStream).arrayBuffer();
+          return decompressedBuffer;
+        }
+        console.warn("DecompressionStream unavailable; assuming plaintext payload");
+        return buffer;
+      }
 
     async function loadMessages() {
       try {
         if (!KEY_PARAM) {
-          throw new Error("Missing decryption key");
+          showStatusMessage("Missing decryption key. Scan the QR code again to continue.");
+          playbackMessages = [];
+          return;
         }
         const currentUrl = new URL(window.location.href);
         const dateFilterRaw = currentUrl.searchParams.get("D") || "";
@@ -418,6 +448,19 @@
           throw new Error(`Failed to fetch chat_data.enc (${response.status})`);
         }
         const enc = await response.json();
+        if (enc.expires) {
+          const expiresAt = new Date(enc.expires);
+          if (Number.isNaN(expiresAt.getTime())) {
+            console.warn("Invalid expiry metadata:", enc.expires);
+          } else {
+            const now = new Date();
+            if (now > expiresAt) {
+              showStatusMessage(`This key expired on ${expiresAt.toDateString()}. Request a new QR code to unlock the chat.`);
+              playbackMessages = [];
+              return;
+            }
+          }
+        }
         const nonce = base64ToBytes(enc.nonce);
         const ciphertext = base64ToBytes(enc.ciphertext);
 
@@ -428,8 +471,9 @@
           ciphertext
         );
 
+        const decompressed = await gunzip(plainBuffer);
         const decoder = new TextDecoder();
-        const decrypted = JSON.parse(decoder.decode(plainBuffer));
+        const decrypted = JSON.parse(decoder.decode(decompressed));
         const prepared = decrypted.map((msg) => ({
           sender: msg.sender,
           fromMe: msg.sender === MY_NAME,
