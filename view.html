@@ -441,10 +441,22 @@
       dateInputEl.value = selectedDate ? normalizedToISO(selectedDate) : "";
     }
 
-    function handleDateInputChange() {
-      if (!dateInputEl) return;
-      const isoValue = dateInputEl.value;
+    function shouldDelayDatePickerNavigation() {
+      if (typeof window === "undefined") return false;
+      try {
+        if (window.matchMedia("(pointer: coarse)").matches) {
+          return true;
+        }
+      } catch (_) {
+        // ignore matchMedia issues
+      }
+      const ua = navigator.userAgent || "";
+      return /iPad|iPhone|iPod|Android/i.test(ua);
+    }
 
+    const datePickerNeedsBlurCommit = shouldDelayDatePickerNavigation();
+
+    function applyDateSelection(isoValue) {
       const url = new URL(window.location.href);
       url.searchParams.delete("K");
       if (isoValue) {
@@ -455,8 +467,24 @@
       window.location.href = url.pathname + (url.searchParams.toString() ? `?${url.searchParams}` : "");
     }
 
+    function handleDateInputChange() {
+      if (!dateInputEl) return;
+      if (datePickerNeedsBlurCommit) {
+        return;
+      }
+      applyDateSelection(dateInputEl.value);
+    }
+
+    function handleDateInputBlur() {
+      if (!dateInputEl || !datePickerNeedsBlurCommit) return;
+      applyDateSelection(dateInputEl.value);
+    }
+
       if (dateInputEl) {
         dateInputEl.addEventListener("change", handleDateInputChange);
+        if (datePickerNeedsBlurCommit) {
+          dateInputEl.addEventListener("blur", handleDateInputBlur);
+        }
       }
 
     function showStatusMessage(message) {
@@ -564,9 +592,10 @@
     function formatMessageText(text) {
       if (!text) return "";
       const trimmed = text.trim().toLowerCase();
-      if (trimmed === "image omitted") {
-        return "🖼️";
-      }
+      // mirror WhatsApp placeholders with concise emoji
+      if (trimmed === "image omitted") return "🖼️";
+      if (trimmed === "gif omitted") return "🎞️";
+      if (trimmed === "sticker omitted") return "🏷️";
       const escaped = escapeHtml(text).replace(/\n/g, "<br>");
       return escaped.replace(/(@[^\s<]+)/g, "<strong>$1</strong>");
     }
