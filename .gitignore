@@ -1,6 +1,6 @@
 # Secrets and exported data
 .secret_key
-chat_qr.png
+chat_qr*.png
 chat.txt
 parsed_chat.json
 
