@@ -1032,6 +1032,7 @@
     let allMessages = [];
     let index = 0;
     let paused = false;
+    let fastForward = false;
     let playbackTimer = null;
 
     const initialUrl = new URL(window.location.href);
@@ -1077,14 +1078,11 @@
       }
     }
 
-    function updatePausedStateClass() {
+    function updatePausedStateClass(fast = fastForward) {
       const root = chatEl.closest(".phone-frame") || chatEl.closest("body") || document.body;
       if (!root) return;
-      if (paused) {
-        root.classList.add("paused");
-      } else {
-        root.classList.remove("paused");
-      }
+      root.classList.toggle("paused", paused);
+      root.classList.toggle("fast-forward", fast && !paused);
     }
 
     function updateControlStates() {
@@ -1109,7 +1107,12 @@
         rewindBtn.disabled = !hasMessages || index <= 0;
       }
       if (fastForwardBtn) {
-        fastForwardBtn.disabled = !hasMessages || index >= playbackMessages.length;
+        fastForwardBtn.disabled = !hasMessages;
+        fastForwardBtn.textContent = fastForward ? "⚡" : "⏭";
+        fastForwardBtn.setAttribute(
+          "aria-label",
+          fastForward ? "Disable fast forward" : "Enable fast forward"
+        );
       }
       updatePausedStateClass();
     }
@@ -1166,13 +1169,13 @@
       }
     }
 
-    function scheduleNextMessage(delayOverride) {
+    function scheduleNextMessage() {
       cancelPlaybackTimer();
       if (paused || index >= playbackMessages.length || !playbackMessages.length) {
         updateControlStates();
         return;
       }
-      const delay = typeof delayOverride === "number" ? delayOverride : getNextMessageDelay();
+      const delay = fastForward ? FAST_FORWARD_DELAY_MS : getNextMessageDelay();
       playbackTimer = setTimeout(() => {
         playbackTimer = null;
         if (paused) return;
@@ -1206,7 +1209,7 @@
       rebuildRenderedMessages();
       updateControlStates();
       if (!paused && index < playbackMessages.length) {
-        scheduleNextMessage(400);
+        scheduleNextMessage();
       }
     }
 
@@ -1221,7 +1224,7 @@
         }
         paused = false;
         updateControlStates();
-        scheduleNextMessage(INITIAL_DELAY_MS);
+        scheduleNextMessage();
         return;
       }
       if (paused) {
@@ -1245,7 +1248,13 @@
     }
     if (fastForwardBtn) {
       fastForwardBtn.addEventListener("click", () => {
-        seekTo(index + 1, { pausePlayback: true });
+        fastForward = !fastForward;
+        if (fastForward) {
+          paused = false;
+          cancelPlaybackTimer();
+          scheduleNextMessage();
+        }
+        updateControlStates();
       });
     }
     initStatsToggle(statsToggleBtn, phoneFrameEl);
@@ -1343,9 +1352,10 @@
       }
     }
 
-    const INITIAL_DELAY_MS = 1200;
-    const MESSAGE_INTERVAL_MS_MIN = 1800;
-    const MESSAGE_INTERVAL_MS_MAX = 3200;
+    const INITIAL_DELAY_MS = 900;
+    const MESSAGE_INTERVAL_MS_MIN = 1400;
+    const MESSAGE_INTERVAL_MS_MAX = 2600;
+    const FAST_FORWARD_DELAY_MS = 120;
 
     function getNextMessageDelay() {
       const span = MESSAGE_INTERVAL_MS_MAX - MESSAGE_INTERVAL_MS_MIN;
@@ -1359,8 +1369,9 @@
         return;
       }
       paused = false;
+      fastForward = false;
       updateControlStates();
-      scheduleNextMessage(INITIAL_DELAY_MS);
+      scheduleNextMessage();
     }
 
     startPlayback();

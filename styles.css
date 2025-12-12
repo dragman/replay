@@ -405,6 +405,11 @@ body {
   box-shadow: 0 0 10px rgba(249, 115, 22, 0.8);
 }
 
+.fast-forward .rec-dot {
+  background: #38bdf8;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.8);
+}
+
 .vignette {
   position: absolute;
   inset: 0;
