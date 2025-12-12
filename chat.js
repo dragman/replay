@@ -321,15 +321,21 @@
     return buffer;
   }
 
-  function startReplay({ chatSelector, dateInputSelector }) {
+  function startReplay({ chatSelector, dateInputSelector, controls = {} }) {
     const chatEl = document.querySelector(chatSelector);
     const dateInputEl = document.querySelector(dateInputSelector);
     if (!chatEl) return;
 
-    const rendererState = createRendererState();
-    let playbackMessages = getFallbackMessages();
-    let allMessages = playbackMessages;
+    const playPauseBtn = controls.playPause ? document.querySelector(controls.playPause) : null;
+    const rewindBtn = controls.rewind ? document.querySelector(controls.rewind) : null;
+    const fastForwardBtn = controls.fastForward ? document.querySelector(controls.fastForward) : null;
+
+    let rendererState = createRendererState();
+    let playbackMessages = [];
+    let allMessages = [];
     let index = 0;
+    let paused = false;
+    let playbackTimer = null;
 
     const initialUrl = new URL(window.location.href);
     const initialSearchParams = new URLSearchParams(initialUrl.search);
@@ -361,6 +367,50 @@
     const sanitizedQuery = initialSearchParams.toString();
     if (initialUrl.search !== (sanitizedQuery ? `?${sanitizedQuery}` : "") || initialUrl.hash) {
       history.replaceState(null, "", initialUrl.pathname + (sanitizedQuery ? `?${sanitizedQuery}` : ""));
+    }
+
+    function cancelPlaybackTimer() {
+      if (playbackTimer) {
+        clearTimeout(playbackTimer);
+        playbackTimer = null;
+      }
+    }
+
+    function updatePausedStateClass() {
+      const root = chatEl.closest(".phone-frame") || chatEl.closest("body") || document.body;
+      if (!root) return;
+      if (paused) {
+        root.classList.add("paused");
+      } else {
+        root.classList.remove("paused");
+      }
+    }
+
+    function updateControlStates() {
+      const hasMessages = playbackMessages.length > 0;
+      if (playPauseBtn) {
+        playPauseBtn.disabled = !hasMessages;
+        if (!hasMessages) {
+          playPauseBtn.textContent = "⏯";
+          playPauseBtn.setAttribute("aria-label", "Pause playback");
+        } else if (index >= playbackMessages.length) {
+          playPauseBtn.textContent = "↻";
+          playPauseBtn.setAttribute("aria-label", "Replay messages");
+        } else if (paused) {
+          playPauseBtn.textContent = "▶";
+          playPauseBtn.setAttribute("aria-label", "Resume playback");
+        } else {
+          playPauseBtn.textContent = "⏸";
+          playPauseBtn.setAttribute("aria-label", "Pause playback");
+        }
+      }
+      if (rewindBtn) {
+        rewindBtn.disabled = !hasMessages || index <= 0;
+      }
+      if (fastForwardBtn) {
+        fastForwardBtn.disabled = !hasMessages || index >= playbackMessages.length;
+      }
+      updatePausedStateClass();
     }
 
     function applyDateSelection(isoValue) {
@@ -396,11 +446,105 @@
       }
     }
 
+    function rebuildRenderedMessages() {
+      if (!playbackMessages.length) {
+        chatEl.innerHTML = "";
+        return;
+      }
+      rendererState = createRendererState();
+      chatEl.innerHTML = "";
+      for (let i = 0; i < index; i++) {
+        appendMessage(chatEl, playbackMessages[i], rendererState, { scroll: false });
+      }
+      chatEl.scrollTo({ top: chatEl.scrollHeight });
+    }
+
+    function scheduleNextMessage(delayOverride) {
+      cancelPlaybackTimer();
+      if (paused || index >= playbackMessages.length || !playbackMessages.length) {
+        updateControlStates();
+        return;
+      }
+      const delay = typeof delayOverride === "number" ? delayOverride : getNextMessageDelay();
+      playbackTimer = setTimeout(() => {
+        playbackTimer = null;
+        if (paused) return;
+        showNextMessage();
+        if (index < playbackMessages.length) {
+          scheduleNextMessage();
+        } else {
+          updateControlStates();
+        }
+      }, delay);
+    }
+
+    function showNextMessage() {
+      if (index >= playbackMessages.length) return;
+      appendMessage(chatEl, playbackMessages[index], rendererState);
+      index++;
+      updateControlStates();
+    }
+
+    function seekTo(targetIndex, { pausePlayback = false } = {}) {
+      if (!playbackMessages.length) return;
+      const clamped = Math.max(0, Math.min(targetIndex, playbackMessages.length));
+      if (clamped === index) return;
+      cancelPlaybackTimer();
+      if (pausePlayback) paused = true;
+      index = clamped;
+      rebuildRenderedMessages();
+      updateControlStates();
+      if (!paused && index < playbackMessages.length) {
+        scheduleNextMessage(400);
+      }
+    }
+
+    function handleTogglePlayPause() {
+      if (!playbackMessages.length) return;
+      if (index >= playbackMessages.length) {
+        index = 0;
+        rendererState = createRendererState();
+        chatEl.innerHTML = "";
+        paused = false;
+        updateControlStates();
+        scheduleNextMessage(INITIAL_DELAY_MS);
+        return;
+      }
+      if (paused) {
+        paused = false;
+        updateControlStates();
+        scheduleNextMessage();
+      } else {
+        paused = true;
+        cancelPlaybackTimer();
+        updateControlStates();
+      }
+    }
+
+    if (playPauseBtn) {
+      playPauseBtn.addEventListener("click", handleTogglePlayPause);
+    }
+    if (rewindBtn) {
+      rewindBtn.addEventListener("click", () => {
+        seekTo(index - 1, { pausePlayback: true });
+      });
+    }
+    if (fastForwardBtn) {
+      fastForwardBtn.addEventListener("click", () => {
+        seekTo(index + 1, { pausePlayback: true });
+      });
+    }
+    updateControlStates();
+
     async function loadMessages() {
       try {
         if (!KEY_PARAM) {
-          showStatusMessage(chatEl, "Missing decryption key. Scan the QR code again to continue.");
           playbackMessages = [];
+          allMessages = [];
+          paused = true;
+          cancelPlaybackTimer();
+          showStatusMessage(chatEl, "Missing decryption key. Scan the QR code again to continue.");
+          updateControlStates();
           return;
         }
         const currentUrl = new URL(window.location.href);
@@ -423,11 +567,15 @@
           } else {
             const now = new Date();
             if (now > expiresAt) {
+              playbackMessages = [];
+              allMessages = [];
+              paused = true;
+              cancelPlaybackTimer();
               showStatusMessage(
                 chatEl,
                 `This key expired on ${expiresAt.toDateString()}. Request a new QR code to unlock the chat.`
               );
-              playbackMessages = [];
+              updateControlStates();
               return;
             }
           }
@@ -445,18 +593,22 @@
         allMessages = prepared;
         playbackMessages = applyDateFilter(prepared, normalizedDate);
         populateDatePicker(dateInputEl, allMessages, normalizedDate);
+        index = 0;
+        paused = false;
+        rendererState = createRendererState();
+        chatEl.innerHTML = "";
+        updateControlStates();
       } catch (err) {
         console.warn("Falling back to built-in messages:", err);
         allMessages = getFallbackMessages();
         playbackMessages = allMessages;
         populateDatePicker(dateInputEl, allMessages, null);
+        index = 0;
+        paused = false;
+        rendererState = createRendererState();
+        chatEl.innerHTML = "";
+        updateControlStates();
       }
-    }
-
-    function step() {
-      if (index >= playbackMessages.length) return;
-      appendMessage(chatEl, playbackMessages[index], rendererState);
-      index++;
     }
 
     const INITIAL_DELAY_MS = 1200;
@@ -468,21 +620,15 @@
       return MESSAGE_INTERVAL_MS_MIN + Math.random() * span;
     }
 
-    function playNextMessage() {
-      if (index >= playbackMessages.length) return;
-      step();
-      if (index < playbackMessages.length) {
-        setTimeout(playNextMessage, getNextMessageDelay());
-      }
-    }
-
     async function startPlayback() {
       await loadMessages();
-      if (!playbackMessages.length) return;
-
-      setTimeout(() => {
-        playNextMessage();
-      }, INITIAL_DELAY_MS);
+      if (!playbackMessages.length) {
+        updateControlStates();
+        return;
+      }
+      paused = false;
+      updateControlStates();
+      scheduleNextMessage(INITIAL_DELAY_MS);
     }
 
     startPlayback();

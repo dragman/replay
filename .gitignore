@@ -1,0 +1,13 @@
+# Secrets and exported data
+.secret_key
+chat_qr.png
+chat.txt
+parsed_chat.json
+
+# Editor settings
+.vscode/
+
+# Python bytecode / caches
+__pycache__/
+*.py[cod]
+tests/__pycache__/

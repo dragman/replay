@@ -19,8 +19,15 @@
     </div>
     <div id="chat" class="chat-window"></div>
     <div class="bottom-bar">
-      <div class="rec-dot"></div>
-      <span>Chat playback</span>
+      <div class="transport-left">
+        <div class="rec-dot"></div>
+        <span>Chat playback</span>
+      </div>
+      <div class="transport-controls">
+        <button type="button" id="rewindBtn" aria-label="Rewind one message">⏮</button>
+        <button type="button" id="playPauseBtn" aria-label="Pause playback">⏯</button>
+        <button type="button" id="fastForwardBtn" aria-label="Fast-forward one message">⏭</button>
+      </div>
     </div>
     <div class="vignette"></div>
   </div>
@@ -30,7 +37,12 @@
     ChatApp.configure({ myName: "Dragos" });
     ChatApp.startReplay({
       chatSelector: "#chat",
-      dateInputSelector: "#dateInput"
+      dateInputSelector: "#dateInput",
+      controls: {
+        playPause: "#playPauseBtn",
+        rewind: "#rewindBtn",
+        fastForward: "#fastForwardBtn"
+      }
     });
   </script>
 </body>

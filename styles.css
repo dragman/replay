@@ -197,16 +197,53 @@ body {
 }
 
 .bottom-bar {
-  height: 40px;
+  min-height: 44px;
   border-top: 1px solid rgba(15, 23, 42, 0.85);
   background: #020617;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   padding: 0 14px;
   font-size: 11px;
   color: #4b5563;
   letter-spacing: 0.05em;
   text-transform: uppercase;
+}
+
+.transport-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.transport-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.transport-controls button {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(15, 23, 42, 0.4);
+  color: #e2e8f0;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: opacity 0.2s ease, background 0.2s ease;
+}
+
+.transport-controls button:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.transport-controls button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
 .rec-dot {
@@ -216,6 +253,11 @@ body {
   background: #16f978;
   margin-right: 8px;
   box-shadow: 0 0 10px rgba(249, 115, 22, 0.7);
+}
+
+.paused .rec-dot {
+  background: #f97316;
+  box-shadow: 0 0 10px rgba(249, 115, 22, 0.8);
 }
 
 .vignette {
