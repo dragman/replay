@@ -49,6 +49,7 @@
     "<media omitted>",
     "media omitted"
   ]);
+  const SYSTEM_MESSAGE_SENDERS = new Set(["sex"]);
   const STOP_WORDS = new Set([
     "a",
     "an",
@@ -420,6 +421,7 @@
   }
 
   let MY_NAME = "Dragos";
+  let SYSTEM_YOU_NAME = "Dragos";
 
   let DEFAULT_DATE = null;
 
@@ -429,6 +431,9 @@
     }
     if (options.defaultDate) {
       DEFAULT_DATE = options.defaultDate;
+    }
+    if (options.systemYouName) {
+      SYSTEM_YOU_NAME = options.systemYouName;
     }
   }
 
@@ -521,12 +526,37 @@
     return highlightMentions(escaped);
   }
 
+  function replaceSystemPronouns(text) {
+    if (!text) return text;
+    return text.replace(/\byou\b/gi, SYSTEM_YOU_NAME);
+  }
+
+  function personalizeDeletionNotice(text, senderName) {
+    if (!text) return text;
+    const trimmed = text.trim();
+    if (/^you deleted this message\.?$/i.test(trimmed)) {
+      const suffix = trimmed.endsWith(".") ? "." : "";
+      const name = senderName || "Someone";
+      return `${name} deleted this message${suffix}`;
+    }
+    return text;
+  }
+
   function prepareMessage(msg) {
+    const senderName = msg.sender || "";
+    const normalizedSender = senderName.trim().toLowerCase();
+    const isSystemAdmin = SYSTEM_MESSAGE_SENDERS.has(normalizedSender);
     const { text, edited } = normalizeEditedContent(msg.text || "");
+    let processedText = text;
+    if (isSystemAdmin) {
+      processedText = replaceSystemPronouns(processedText);
+    }
+    processedText = personalizeDeletionNotice(processedText, senderName);
     return {
-      sender: msg.sender,
-      fromMe: msg.sender === MY_NAME,
-      text,
+      sender: senderName,
+      fromMe: !isSystemAdmin && senderName === MY_NAME,
+      isSystemAdmin,
+      text: processedText,
       time: msg.time || "",
       date: msg.date || "",
       edited
@@ -551,21 +581,37 @@
   }
 
   function appendMessage(chatEl, msg, rendererState, options = {}) {
+    const roleClass = msg.isSystemAdmin ? "system" : msg.fromMe ? "me" : "them";
     const row = document.createElement("div");
-    row.className = "bubble-row " + (msg.fromMe ? "me" : "them");
+    row.className = `bubble-row ${roleClass}`;
 
     const bubble = document.createElement("div");
-    bubble.className = "bubble " + (msg.fromMe ? "me" : "them");
-    const color = getSenderBubbleColor(rendererState, msg.sender, msg.fromMe);
-    if (color) {
-      bubble.style.background = color;
-      bubble.style.color = "#f8fafc";
-      bubble.style.boxShadow = "0 4px 10px rgba(15, 23, 42, 0.45)";
+    bubble.className = `bubble ${roleClass}`;
+    if (!msg.isSystemAdmin) {
+      const color = getSenderBubbleColor(rendererState, msg.sender, msg.fromMe);
+      if (color) {
+        bubble.style.background = color;
+        bubble.style.color = "#f8fafc";
+        bubble.style.boxShadow = "0 4px 10px rgba(15, 23, 42, 0.45)";
+      }
     }
 
     const sender = document.createElement("div");
     sender.className = "sender";
-    sender.textContent = msg.sender;
+    if (msg.isSystemAdmin) {
+      const badge = document.createElement("span");
+      badge.className = "system-badge";
+      badge.textContent = "System notice";
+      sender.appendChild(badge);
+      if (msg.sender) {
+        const origin = document.createElement("span");
+        origin.className = "system-origin";
+        origin.textContent = msg.sender;
+        sender.appendChild(origin);
+      }
+    } else {
+      sender.textContent = msg.sender;
+    }
 
     const text = document.createElement("div");
     const formatted = formatMessageText(msg.text);
