@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Chat Renderer · Testbed</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-container">
+    <div class="test-wrapper">
+      <div class="phone-frame">
+        <div class="top-bar">
+          <div class="dot"></div>
+          <span>Formatting Showcase</span>
+        </div>
+        <div class="control-bar">
+          <label for="sampleDate">Sample date</label>
+          <input type="date" id="sampleDate" value="2024-04-07" disabled />
+        </div>
+        <div id="chat" class="chat-window"></div>
+        <div class="bottom-bar">
+          <div class="rec-dot"></div>
+          <span>Style reference</span>
+        </div>
+        <div class="vignette"></div>
+      </div>
+      <div class="test-note">
+        Static sample demonstrating mentions, edited text, placeholder media, multi-line messages and sender colors.
+      </div>
+    </div>
+  </div>
+
+  <script src="chat.js"></script>
+  <script>
+    const SAMPLE_MESSAGES = [
+      {
+        sender: "Ana",
+        text: "@Dragos check this out!\nLine two with emphasis.",
+        time: "08:59",
+        date: "07/04/2024"
+      },
+      {
+        sender: "Dragos",
+        text: "Looks perfect now <This message was edited>",
+        time: "09:00",
+        date: "07/04/2024"
+      },
+      {
+        sender: "Mara",
+        text: "image omitted",
+        time: "09:05",
+        date: "07/04/2024"
+      },
+      {
+        sender: "Paul",
+        text: "gif omitted",
+        time: "09:06",
+        date: "07/04/2024"
+      },
+      {
+        sender: "Ana",
+        text: "sticker omitted",
+        time: "09:07",
+        date: "07/04/2024"
+      },
+      {
+        sender: "Dragos",
+        text: "And here's a regular multiline message.\nLine two.\nLine three!",
+        time: "09:10",
+        date: "07/04/2024"
+      }
+    ];
+
+    ChatApp.configure({ myName: "Dragos" });
+    ChatApp.renderSample({
+      chatSelector: "#chat",
+      messages: SAMPLE_MESSAGES
+    });
+  </script>
+</body>
+</html>
