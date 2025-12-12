@@ -9,7 +9,7 @@
 <body>
   <div class="app-container">
     <div class="test-wrapper">
-      <div class="phone-frame">
+      <div class="phone-frame stats-collapsed">
         <div class="top-bar">
           <div class="dot"></div>
           <span>Formatting Showcase</span>
@@ -17,8 +17,45 @@
         <div class="control-bar">
           <label for="sampleDate">Sample date</label>
           <input type="date" id="sampleDate" value="2024-04-07" disabled />
+          <button type="button" id="statsToggleBtn" class="stats-toggle" aria-expanded="false">
+            Show stats
+          </button>
         </div>
         <div id="chat" class="chat-window"></div>
+        <div id="statsPanel" class="stats-panel">
+          <div class="stats-grid">
+            <div class="stats-card">
+              <div class="stats-card-title">Messages per person</div>
+              <div class="stat-list" data-stat="messages">
+                <div class="stat-placeholder">Waiting for playback…</div>
+              </div>
+            </div>
+            <div class="stats-card">
+              <div class="stats-card-title">Media shared</div>
+              <div class="stat-list" data-stat="media">
+                <div class="stat-placeholder">Waiting for playback…</div>
+              </div>
+            </div>
+            <div class="stats-card">
+              <div class="stats-card-title">Quiet streaks</div>
+              <div class="stat-list" data-stat="quiet">
+                <div class="stat-placeholder">Waiting for playback…</div>
+              </div>
+            </div>
+            <div class="stats-card">
+              <div class="stats-card-title">Popular words</div>
+              <div class="word-list" data-stat="popular-words">
+                <div class="stat-placeholder">Waiting for playback…</div>
+              </div>
+            </div>
+            <div class="stats-card">
+              <div class="stats-card-title">Unusual words</div>
+              <div class="word-list" data-stat="unusual-words">
+                <div class="stat-placeholder">Waiting for playback…</div>
+              </div>
+            </div>
+          </div>
+        </div>
         <div class="bottom-bar">
           <div class="transport-left">
             <div class="rec-dot"></div>

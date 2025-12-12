@@ -37,12 +37,398 @@
     }
   ];
   const KEY_STORAGE_KEY = "chatReplayKey";
+  const MEDIA_PLACEHOLDERS = new Set([
+    "image omitted",
+    "gif omitted",
+    "sticker omitted",
+    "video omitted",
+    "audio omitted",
+    "voice message omitted",
+    "document omitted",
+    "contact card omitted",
+    "<media omitted>",
+    "media omitted"
+  ]);
+  const STOP_WORDS = new Set([
+    "a",
+    "an",
+    "and",
+    "are",
+    "as",
+    "at",
+    "be",
+    "been",
+    "being",
+    "but",
+    "by",
+    "can",
+    "can't",
+    "cannot",
+    "could",
+    "did",
+    "do",
+    "does",
+    "doing",
+    "don't",
+    "for",
+    "from",
+    "had",
+    "has",
+    "have",
+    "having",
+    "he",
+    "her",
+    "here",
+    "hers",
+    "herself",
+    "him",
+    "himself",
+    "his",
+    "how",
+    "i",
+    "i'd",
+    "i'll",
+    "i'm",
+    "i've",
+    "if",
+    "in",
+    "into",
+    "is",
+    "it",
+    "it's",
+    "its",
+    "me",
+    "more",
+    "most",
+    "my",
+    "myself",
+    "no",
+    "nor",
+    "not",
+    "of",
+    "off",
+    "on",
+    "once",
+    "only",
+    "or",
+    "other",
+    "our",
+    "ours",
+    "ourselves",
+    "out",
+    "over",
+    "own",
+    "she",
+    "she's",
+    "should",
+    "so",
+    "some",
+    "such",
+    "than",
+    "that",
+    "that's",
+    "the",
+    "their",
+    "theirs",
+    "them",
+    "themselves",
+    "then",
+    "there",
+    "these",
+    "they",
+    "they're",
+    "this",
+    "those",
+    "through",
+    "to",
+    "too",
+    "under",
+    "until",
+    "up",
+    "very",
+    "was",
+    "we",
+    "we're",
+    "were",
+    "what",
+    "when",
+    "where",
+    "which",
+    "while",
+    "who",
+    "whom",
+    "why",
+    "will",
+    "with",
+    "you",
+    "you'd",
+    "you'll",
+    "you're",
+    "you've",
+    "your",
+    "yours",
+    "yourself",
+    "yourselves"
+  ]);
+  const COMMON_DICTIONARY_WORDS = new Set([
+    "about",
+    "above",
+    "across",
+    "act",
+    "after",
+    "again",
+    "against",
+    "age",
+    "ago",
+    "air",
+    "all",
+    "almost",
+    "along",
+    "already",
+    "also",
+    "always",
+    "am",
+    "among",
+    "another",
+    "any",
+    "anyone",
+    "anything",
+    "around",
+    "ask",
+    "away",
+    "back",
+    "because",
+    "become",
+    "before",
+    "begin",
+    "behind",
+    "believe",
+    "best",
+    "better",
+    "between",
+    "big",
+    "both",
+    "call",
+    "came",
+    "change",
+    "child",
+    "children",
+    "city",
+    "come",
+    "company",
+    "country",
+    "course",
+    "day",
+    "different",
+    "during",
+    "early",
+    "earth",
+    "each",
+    "end",
+    "enough",
+    "even",
+    "ever",
+    "every",
+    "everyone",
+    "everything",
+    "fact",
+    "family",
+    "far",
+    "feel",
+    "few",
+    "find",
+    "first",
+    "food",
+    "form",
+    "friend",
+    "friends",
+    "game",
+    "give",
+    "good",
+    "great",
+    "group",
+    "hand",
+    "hard",
+    "head",
+    "hear",
+    "help",
+    "high",
+    "history",
+    "home",
+    "house",
+    "important",
+    "keep",
+    "kind",
+    "know",
+    "large",
+    "last",
+    "late",
+    "learn",
+    "leave",
+    "left",
+    "less",
+    "life",
+    "light",
+    "like",
+    "line",
+    "little",
+    "long",
+    "look",
+    "lot",
+    "love",
+    "made",
+    "make",
+    "man",
+    "many",
+    "maybe",
+    "mean",
+    "might",
+    "money",
+    "month",
+    "more",
+    "morning",
+    "most",
+    "mother",
+    "move",
+    "much",
+    "music",
+    "must",
+    "name",
+    "need",
+    "never",
+    "new",
+    "next",
+    "night",
+    "nothing",
+    "number",
+    "often",
+    "old",
+    "once",
+    "open",
+    "other",
+    "others",
+    "outside",
+    "paper",
+    "part",
+    "people",
+    "place",
+    "plan",
+    "play",
+    "point",
+    "power",
+    "present",
+    "problem",
+    "public",
+    "question",
+    "quite",
+    "rather",
+    "real",
+    "reason",
+    "right",
+    "room",
+    "run",
+    "same",
+    "school",
+    "second",
+    "see",
+    "seem",
+    "sense",
+    "service",
+    "set",
+    "she",
+    "show",
+    "side",
+    "small",
+    "something",
+    "sometimes",
+    "start",
+    "state",
+    "story",
+    "study",
+    "such",
+    "sure",
+    "system",
+    "take",
+    "talk",
+    "tell",
+    "than",
+    "thing",
+    "think",
+    "thought",
+    "through",
+    "time",
+    "today",
+    "together",
+    "told",
+    "too",
+    "try",
+    "turn",
+    "use",
+    "used",
+    "very",
+    "want",
+    "water",
+    "way",
+    "week",
+    "while",
+    "white",
+    "whole",
+    "why",
+    "word",
+    "work",
+    "world",
+    "year",
+    "yes",
+    "yet"
+  ]);
+  const WORD_EXTRACT_REGEX = /[a-zA-Z]+(?:'[a-z]+)?/g;
+  STOP_WORDS.forEach((word) => COMMON_DICTIONARY_WORDS.add(word));
+  let dictionaryLoaded = false;
+  let dictionaryLoadPromise = null;
+  const DICTIONARY_CANDIDATES = ["dictionary.txt", "dictionary_en.txt"];
+
+  function addWordToDictionary(word) {
+    const clean = word.trim().toLowerCase();
+    if (clean) {
+      COMMON_DICTIONARY_WORDS.add(clean);
+    }
+  }
+
+  async function ensureDictionaryLoaded() {
+    if (dictionaryLoaded) return;
+    if (!dictionaryLoadPromise) {
+      dictionaryLoadPromise = (async () => {
+        for (const url of DICTIONARY_CANDIDATES) {
+          try {
+            const resp = await fetch(url, { cache: "no-store" });
+            if (!resp.ok) continue;
+            const text = await resp.text();
+            text
+              .split(/\r?\n/)
+              .map((line) => line.trim().toLowerCase())
+              .filter(Boolean)
+              .forEach(addWordToDictionary);
+            break;
+          } catch (_) {
+            // ignore fetch errors
+          }
+        }
+        dictionaryLoaded = true;
+      })();
+    }
+    return dictionaryLoadPromise;
+  }
 
   let MY_NAME = "Dragos";
+
+  let DEFAULT_DATE = null;
 
   function configure(options = {}) {
     if (options.myName) {
       MY_NAME = options.myName;
+    }
+    if (options.defaultDate) {
+      DEFAULT_DATE = options.defaultDate;
     }
   }
 
@@ -107,12 +493,28 @@
     return str.replace(/(@[^\s<]+)/g, '<span class="mention">$1</span>');
   }
 
+  function isMediaPlaceholderText(text) {
+    if (!text) return false;
+    const normalized = text.trim().toLowerCase();
+    return MEDIA_PLACEHOLDERS.has(normalized);
+  }
+
+  function extractMeaningfulWords(text) {
+    if (!text || isMediaPlaceholderText(text)) return [];
+    const matches = text.toLowerCase().match(WORD_EXTRACT_REGEX);
+    if (!matches) return [];
+    return matches
+      .map((word) => word.replace(/^'+|'+$/g, ""))
+      .filter((word) => word.length > 2 && !STOP_WORDS.has(word));
+  }
+
   function formatMessageText(text) {
     if (!text) return "";
     const trimmed = text.trim().toLowerCase();
     if (trimmed === "image omitted") return "🖼️";
     if (trimmed === "gif omitted") return "🎞️";
     if (trimmed === "sticker omitted") return "🏷️";
+    if (trimmed === "document omitted") return "📄";
     let escaped = escapeHtml(text);
     escaped = applyWhatsAppFormatting(escaped);
     escaped = escaped.replace(/\n/g, "<br>");
@@ -167,7 +569,7 @@
 
     const text = document.createElement("div");
     const formatted = formatMessageText(msg.text);
-    if (formatted === "🖼️" || formatted === "🎞️" || formatted === "🏷️") {
+    if (formatted === "🖼️" || formatted === "🎞️" || formatted === "🏷️" || formatted === "📄") {
       text.textContent = formatted;
       text.style.fontSize = formatted === "🖼️" ? "20px" : "18px";
     } else {
@@ -237,6 +639,294 @@
     }
 
     return new Uint8Array(out);
+  }
+
+  function parseMessageTimestamp(msg) {
+    if (!msg || !msg.date) return null;
+    const [dayStr, monthStr, yearStr] = msg.date.split("/");
+    const day = Number.parseInt(dayStr, 10);
+    const month = Number.parseInt(monthStr, 10);
+    const year = Number.parseInt(yearStr, 10);
+    if (!day || !month || !year) return null;
+    let hours = 0;
+    let minutes = 0;
+    if (msg.time) {
+      const [hourStr, minuteStr] = msg.time.split(":");
+      hours = Number.parseInt(hourStr, 10);
+      minutes = Number.parseInt(minuteStr, 10);
+      if (Number.isNaN(hours)) hours = 0;
+      if (Number.isNaN(minutes)) minutes = 0;
+    }
+    const date = new Date(year, month - 1, day, hours, minutes);
+    const timestamp = date.getTime();
+    return Number.isNaN(timestamp) ? null : timestamp;
+  }
+
+  function formatDuration(ms) {
+    if (!ms || ms < 0) return "—";
+    const totalMinutes = Math.floor(ms / 60000);
+    if (totalMinutes < 1) return "<1m";
+    const days = Math.floor(totalMinutes / 1440);
+    const hours = Math.floor((totalMinutes % 1440) / 60);
+    const minutes = totalMinutes % 60;
+    const parts = [];
+    if (days) parts.push(`${days}d`);
+    if (hours && parts.length < 2) parts.push(`${hours}h`);
+    if (minutes && parts.length < 2) parts.push(`${minutes}m`);
+    return parts.join(" ");
+  }
+
+  function createEmptyStatsState() {
+    return {
+      people: new Map(),
+      wordCounts: new Map(),
+      unusualWordCounts: new Map()
+    };
+  }
+
+  function getPersonStatsEntry(state, sender) {
+    const key = sender || "Unknown";
+    if (!state.people.has(key)) {
+      state.people.set(key, {
+        messages: 0,
+        media: 0,
+        longestQuietMs: 0,
+        lastTimestamp: null
+      });
+    }
+    return state.people.get(key);
+  }
+
+  function updateStatsState(state, msg) {
+    if (!msg) return;
+    const person = getPersonStatsEntry(state, msg.sender);
+    person.messages += 1;
+
+    const normalized = (msg.text || "").trim().toLowerCase();
+    if (MEDIA_PLACEHOLDERS.has(normalized)) {
+      person.media += 1;
+    }
+
+    const timestamp = parseMessageTimestamp(msg);
+    if (timestamp && person.lastTimestamp) {
+      const gap = timestamp - person.lastTimestamp;
+      if (gap > person.longestQuietMs) {
+        person.longestQuietMs = gap;
+      }
+    }
+    if (timestamp) {
+      person.lastTimestamp = timestamp;
+    }
+
+    if (!MEDIA_PLACEHOLDERS.has(normalized)) {
+      const words = extractMeaningfulWords(msg.text || "");
+      for (const word of words) {
+        const count = (state.wordCounts.get(word) || 0) + 1;
+        state.wordCounts.set(word, count);
+        if (!COMMON_DICTIONARY_WORDS.has(word)) {
+          const unusualCount = (state.unusualWordCounts.get(word) || 0) + 1;
+          state.unusualWordCounts.set(word, unusualCount);
+        }
+      }
+    }
+  }
+
+  function createPlaceholderElement(text) {
+    const placeholder = document.createElement("div");
+    placeholder.className = "stat-placeholder";
+    placeholder.textContent = text;
+    return placeholder;
+  }
+
+  function renderPeopleMetric(container, entries, options = {}) {
+    if (!container) return;
+    container.innerHTML = "";
+    if (!entries.length) {
+      container.appendChild(createPlaceholderElement(options.emptyText || "Waiting for playback…"));
+      return;
+    }
+    const limit = options.limit || 4;
+    const topEntries = entries.slice(0, limit);
+    const maxValue = topEntries[0]?.value || 1;
+    topEntries.forEach(({ name, value, data }) => {
+      const row = document.createElement("div");
+      row.className = "stat-row";
+      const main = document.createElement("div");
+      main.className = "stat-main";
+      const label = document.createElement("div");
+      label.className = "stat-label";
+      label.textContent = name;
+      const sub = document.createElement("div");
+      sub.className = "stat-subtext";
+      sub.textContent = options.subtext ? options.subtext(data, value) : `${value} total`;
+      main.appendChild(label);
+      main.appendChild(sub);
+      const valueEl = document.createElement("div");
+      valueEl.className = "stat-value";
+      valueEl.textContent = options.valueFormatter ? options.valueFormatter(value) : value;
+      row.appendChild(main);
+      row.appendChild(valueEl);
+      container.appendChild(row);
+      const progress = document.createElement("div");
+      progress.className = "stat-progress";
+      const bar = document.createElement("span");
+      const width = Math.max(8, (value / maxValue) * 100);
+      bar.style.width = `${width}%`;
+      progress.appendChild(bar);
+      container.appendChild(progress);
+    });
+  }
+
+  function renderWordList(container, entries, options = {}) {
+    if (!container) return;
+    container.innerHTML = "";
+    if (!entries.length) {
+      container.appendChild(createPlaceholderElement(options.emptyText || "Waiting for playback…"));
+      return;
+    }
+    entries.forEach(([word, count]) => {
+      const chip = document.createElement("div");
+      chip.className = "word-chip";
+      const wordSpan = document.createElement("span");
+      wordSpan.textContent = word;
+      const countSpan = document.createElement("span");
+      countSpan.className = "word-count";
+      countSpan.textContent = `×${count}`;
+      chip.appendChild(wordSpan);
+      chip.appendChild(countSpan);
+      container.appendChild(chip);
+    });
+  }
+
+  function renderQuietMetric(container, entries) {
+    if (!container) return;
+    container.innerHTML = "";
+    if (!entries.length) {
+      container.appendChild(createPlaceholderElement("Waiting for playback…"));
+      return;
+    }
+    entries.forEach(({ name, value }) => {
+      const row = document.createElement("div");
+      row.className = "stat-row";
+      const main = document.createElement("div");
+      main.className = "stat-main";
+      const label = document.createElement("div");
+      label.className = "stat-label";
+      label.textContent = name;
+      const sub = document.createElement("div");
+      sub.className = "stat-subtext";
+      sub.textContent = "Longest quiet streak";
+      main.appendChild(label);
+      main.appendChild(sub);
+      const valueEl = document.createElement("div");
+      valueEl.className = "stat-value";
+      valueEl.textContent = formatDuration(value);
+      row.appendChild(main);
+      row.appendChild(valueEl);
+      container.appendChild(row);
+    });
+  }
+
+  function createStatsManager(panelSelectorOrEl) {
+    const panelEl =
+      typeof panelSelectorOrEl === "string" ? document.querySelector(panelSelectorOrEl) : panelSelectorOrEl;
+    if (!panelEl) return null;
+    const dom = {
+      messages: panelEl.querySelector('[data-stat="messages"]'),
+      media: panelEl.querySelector('[data-stat="media"]'),
+      quiet: panelEl.querySelector('[data-stat="quiet"]'),
+      words: panelEl.querySelector('[data-stat="popular-words"]'),
+      unusual: panelEl.querySelector('[data-stat="unusual-words"]')
+    };
+    const state = createEmptyStatsState();
+
+    function resetStateOnly() {
+      state.people = new Map();
+      state.wordCounts = new Map();
+      state.unusualWordCounts = new Map();
+    }
+
+    function render() {
+      const peopleEntries = Array.from(state.people.entries());
+      const messageEntries = peopleEntries
+        .map(([name, data]) => ({ name, value: data.messages, data }))
+        .filter((entry) => entry.value > 0)
+        .sort((a, b) => b.value - a.value);
+      const mediaEntries = peopleEntries
+        .map(([name, data]) => ({ name, value: data.media, data }))
+        .filter((entry) => entry.value > 0)
+        .sort((a, b) => b.value - a.value);
+      const quietEntries = peopleEntries
+        .map(([name, data]) => ({ name, value: data.longestQuietMs }))
+        .filter((entry) => entry.value > 0)
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 4);
+
+      renderPeopleMetric(dom.messages, messageEntries, {
+        subtext: (data) => `${data.media} media shared`,
+        limit: 4
+      });
+      renderPeopleMetric(dom.media, mediaEntries, {
+        subtext: (data) => `${data.messages} msgs`,
+        valueFormatter: (value) => `${value}`,
+        limit: 4,
+        emptyText: "No media yet"
+      });
+      renderQuietMetric(dom.quiet, quietEntries);
+
+      const popularWords = Array.from(state.wordCounts.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 6);
+      const unusualWords = Array.from(state.unusualWordCounts.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 6);
+      renderWordList(dom.words, popularWords, { emptyText: "No words yet" });
+      renderWordList(dom.unusual, unusualWords, { emptyText: "No words yet" });
+    }
+
+    function resetStats() {
+      resetStateOnly();
+      render();
+    }
+
+    return {
+      reset: resetStats,
+      recordMessage(msg, options = {}) {
+        updateStatsState(state, msg);
+        if (!options.silent) {
+          render();
+        }
+      },
+      applyRange(messages, count) {
+        if (!messages || !messages.length || !count) {
+          resetStats();
+          return;
+        }
+        resetStateOnly();
+        const limit = Math.min(count, messages.length);
+        for (let i = 0; i < limit; i++) {
+          updateStatsState(state, messages[i]);
+        }
+        render();
+      }
+    };
+  }
+
+  function initStatsToggle(buttonEl, frameEl) {
+    if (!buttonEl || !frameEl) return;
+    if (!frameEl.classList.contains("stats-collapsed")) {
+      frameEl.classList.add("stats-collapsed");
+    }
+    const update = () => {
+      const collapsed = frameEl.classList.contains("stats-collapsed");
+      buttonEl.textContent = collapsed ? "Show stats" : "Hide stats";
+      buttonEl.setAttribute("aria-expanded", String(!collapsed));
+    };
+    update();
+    buttonEl.addEventListener("click", () => {
+      frameEl.classList.toggle("stats-collapsed");
+      update();
+    });
   }
 
   function normalizeDateInput(value) {
@@ -329,6 +1019,13 @@
     const playPauseBtn = controls.playPause ? document.querySelector(controls.playPause) : null;
     const rewindBtn = controls.rewind ? document.querySelector(controls.rewind) : null;
     const fastForwardBtn = controls.fastForward ? document.querySelector(controls.fastForward) : null;
+    const statsPanelEl = document.querySelector("#statsPanel");
+    const statsToggleBtn = document.querySelector("#statsToggleBtn");
+    const phoneFrameEl = chatEl.closest(".phone-frame");
+    const statsManager = createStatsManager(statsPanelEl);
+    if (statsManager) {
+      statsManager.reset();
+    }
 
     let rendererState = createRendererState();
     let playbackMessages = [];
@@ -342,6 +1039,10 @@
     const initialHashString = initialUrl.hash.startsWith("#") ? initialUrl.hash.slice(1) : "";
     const initialHashParams = new URLSearchParams(initialHashString);
     const keyFromUrl = initialSearchParams.get("K") || initialHashParams.get("K") || "";
+    const meFromUrl = initialSearchParams.get("me") || initialHashParams.get("me");
+    if (meFromUrl) {
+      MY_NAME = meFromUrl;
+    }
     let storedKey = "";
     try {
       storedKey = sessionStorage.getItem(KEY_STORAGE_KEY) || "";
@@ -449,6 +1150,9 @@
     function rebuildRenderedMessages() {
       if (!playbackMessages.length) {
         chatEl.innerHTML = "";
+        if (statsManager) {
+          statsManager.reset();
+        }
         return;
       }
       rendererState = createRendererState();
@@ -457,6 +1161,9 @@
         appendMessage(chatEl, playbackMessages[i], rendererState, { scroll: false });
       }
       chatEl.scrollTo({ top: chatEl.scrollHeight });
+      if (statsManager) {
+        statsManager.applyRange(playbackMessages, index);
+      }
     }
 
     function scheduleNextMessage(delayOverride) {
@@ -480,7 +1187,11 @@
 
     function showNextMessage() {
       if (index >= playbackMessages.length) return;
-      appendMessage(chatEl, playbackMessages[index], rendererState);
+      const currentMessage = playbackMessages[index];
+      appendMessage(chatEl, currentMessage, rendererState);
+      if (statsManager) {
+        statsManager.recordMessage(currentMessage);
+      }
       index++;
       updateControlStates();
     }
@@ -505,6 +1216,9 @@
         index = 0;
         rendererState = createRendererState();
         chatEl.innerHTML = "";
+        if (statsManager) {
+          statsManager.reset();
+        }
         paused = false;
         updateControlStates();
         scheduleNextMessage(INITIAL_DELAY_MS);
@@ -534,10 +1248,13 @@
         seekTo(index + 1, { pausePlayback: true });
       });
     }
+    initStatsToggle(statsToggleBtn, phoneFrameEl);
     updateControlStates();
 
     async function loadMessages() {
+      let normalizedDate = null;
       try {
+        await ensureDictionaryLoaded();
         if (!KEY_PARAM) {
           playbackMessages = [];
           allMessages = [];
@@ -545,11 +1262,17 @@
           cancelPlaybackTimer();
           showStatusMessage(chatEl, "Missing decryption key. Scan the QR code again to continue.");
           updateControlStates();
+          if (statsManager) {
+            statsManager.reset();
+          }
           return;
         }
         const currentUrl = new URL(window.location.href);
         const dateFilterRaw = currentUrl.searchParams.get("D") || "";
-        const normalizedDate = normalizeDateInput(dateFilterRaw);
+        normalizedDate = normalizeDateInput(dateFilterRaw);
+        if (!dateFilterRaw && !normalizedDate && DEFAULT_DATE) {
+          normalizedDate = normalizeDateInput(DEFAULT_DATE) || null;
+        }
         if (dateFilterRaw && !normalizedDate) {
           console.warn("Invalid date filter. Use DD/MM/YYYY or YYYY-MM-DD.");
         }
@@ -576,6 +1299,9 @@
                 `This key expired on ${expiresAt.toDateString()}. Request a new QR code to unlock the chat.`
               );
               updateControlStates();
+              if (statsManager) {
+                statsManager.reset();
+              }
               return;
             }
           }
@@ -597,16 +1323,22 @@
         paused = false;
         rendererState = createRendererState();
         chatEl.innerHTML = "";
+        if (statsManager) {
+          statsManager.reset();
+        }
         updateControlStates();
       } catch (err) {
         console.warn("Falling back to built-in messages:", err);
         allMessages = getFallbackMessages();
-        playbackMessages = allMessages;
-        populateDatePicker(dateInputEl, allMessages, null);
+        playbackMessages = applyDateFilter(allMessages, normalizedDate);
+        populateDatePicker(dateInputEl, allMessages, normalizedDate);
         index = 0;
         paused = false;
         rendererState = createRendererState();
         chatEl.innerHTML = "";
+        if (statsManager) {
+          statsManager.reset();
+        }
         updateControlStates();
       }
     }
@@ -634,13 +1366,21 @@
     startPlayback();
   }
 
-  function renderSample({ chatSelector, messages }) {
+  async function renderSample({ chatSelector, messages }) {
     const chatEl = document.querySelector(chatSelector);
     if (!chatEl) return;
+    await ensureDictionaryLoaded();
     const rendererState = createRendererState();
     chatEl.innerHTML = "";
     const prepared = prepareMessages(messages);
     prepared.forEach((msg) => appendMessage(chatEl, msg, rendererState, { scroll: false }));
+    const statsManager = createStatsManager(document.querySelector("#statsPanel"));
+    if (statsManager) {
+      statsManager.applyRange(prepared, prepared.length);
+    }
+    const phoneFrameEl = chatEl.closest(".phone-frame");
+    const statsToggleBtn = document.getElementById("statsToggleBtn");
+    initStatsToggle(statsToggleBtn, phoneFrameEl);
   }
 
   window.ChatApp = {
