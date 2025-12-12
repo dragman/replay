@@ -156,6 +156,11 @@ body {
   text-shadow: none;
 }
 
+.mention {
+  font-weight: 600;
+  color: #eab308;
+}
+
 .time {
   font-size: 10px;
   opacity: 0.6;

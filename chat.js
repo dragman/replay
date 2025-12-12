@@ -71,14 +71,52 @@
       .replace(/'/g, "&#39;");
   }
 
+  function escapeRegExp(str) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+
+  function isFormattingBoundary(char) {
+    if (!char) return true;
+    return /\s/.test(char) || /[.,!?;:()\[\]{}"'“”‘’/\\-]/.test(char);
+  }
+
+  function applyMarkerFormatting(str, marker, tag) {
+    const escapedMarker = escapeRegExp(marker);
+    const pattern = new RegExp(`${escapedMarker}([\\s\\S]+?)${escapedMarker}`, "g");
+    return str.replace(pattern, (match, content, offset, full) => {
+      if (!content.trim()) return match;
+      if (/^\s/.test(content) || /\s$/.test(content)) return match;
+      const before = full[offset - 1];
+      const after = full[offset + match.length];
+      if (!isFormattingBoundary(before) || !isFormattingBoundary(after)) {
+        return match;
+      }
+      return `<${tag}>${content}</${tag}>`;
+    });
+  }
+
+  function applyWhatsAppFormatting(str) {
+    let formatted = str;
+    formatted = applyMarkerFormatting(formatted, "*", "strong");
+    formatted = applyMarkerFormatting(formatted, "_", "em");
+    formatted = applyMarkerFormatting(formatted, "~", "del");
+    return formatted;
+  }
+
+  function highlightMentions(str) {
+    return str.replace(/(@[^\s<]+)/g, '<span class="mention">$1</span>');
+  }
+
   function formatMessageText(text) {
     if (!text) return "";
     const trimmed = text.trim().toLowerCase();
     if (trimmed === "image omitted") return "🖼️";
     if (trimmed === "gif omitted") return "🎞️";
     if (trimmed === "sticker omitted") return "🏷️";
-    const escaped = escapeHtml(text).replace(/\n/g, "<br>");
-    return escaped.replace(/(@[^\s<]+)/g, "<strong>$1</strong>");
+    let escaped = escapeHtml(text);
+    escaped = applyWhatsAppFormatting(escaped);
+    escaped = escaped.replace(/\n/g, "<br>");
+    return highlightMentions(escaped);
   }
 
   function prepareMessage(msg) {
